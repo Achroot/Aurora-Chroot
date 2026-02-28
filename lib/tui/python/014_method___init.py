@@ -1,0 +1,49 @@
+    def __init__(self, stdscr, base_dir):
+        self.stdscr = stdscr
+        self.base_dir = base_dir
+        self.help_text = find_help_text(base_dir)
+        self.sections = parse_help(self.help_text)
+        self.section_by_name = {section["title"]: section for section in self.sections}
+        self.specs = self.build_specs()
+        self.commands = self.build_command_order()
+        if not self.commands:
+            self.commands = ["help"]
+
+        self.runner = os.environ.get("CHROOT_TUI_RUNNER", "chroot").strip() or "chroot"
+
+        self.state = "menu"
+        self.menu_index = 0
+        self.menu_scroll = 0
+
+        self.active_command = self.commands[0]
+        self.form_values = {}
+        self.form_index = 0
+
+        self.result_command = ""
+        self.result_exit_code = 0
+        self.result_duration = 0.0
+        self.result_lines = ["No command executed yet."]
+        self.result_scroll = 0
+        self.result_hscroll = 0
+        self.result_back_state = "menu"
+        self.result_rerun_cmd = None
+        self.result_rerun_stdin = ""
+        self.result_rerun_interactive = False
+
+        self.distros_catalog = []
+        self.distros_runtime_root = ""
+        self.runtime_root_hint = ""
+        self.distros_stage = "distros"
+        self.distros_index = 0
+        self.distros_version_index = 0
+        self.restore_backups = {}
+
+        self.settings_rows = []
+        self.settings_index = 0
+        self.settings_pending = {}
+
+        self.status_message = ""
+        self.status_kind = "info"
+        self.status_time = 0.0
+
+        self.set_active_command(self.active_command)

@@ -1,0 +1,235 @@
+chroot_x11_socket_dir() {
+  printf '%s/tmp/.X11-unix' "$CHROOT_TERMUX_PREFIX"
+}
+
+chroot_x11_socket_path_display0() {
+  printf '%s/X0' "$(chroot_x11_socket_dir)"
+}
+
+chroot_x11_enabled() {
+  chroot_is_true "$(chroot_setting_get x11 2>/dev/null || echo false)"
+}
+
+chroot_x11_bin_path() {
+  if [[ -x "$CHROOT_TERMUX_BIN/termux-x11" ]]; then
+    printf '%s\n' "$CHROOT_TERMUX_BIN/termux-x11"
+    return 0
+  fi
+  local found
+  found="$(command -v termux-x11 2>/dev/null || true)"
+  [[ -n "$found" ]] || return 1
+  printf '%s\n' "$found"
+}
+
+chroot_x11_shell_path() {
+  if [[ -n "$CHROOT_HOST_SH" && -x "$CHROOT_HOST_SH" ]]; then
+    printf '%s\n' "$CHROOT_HOST_SH"
+    return 0
+  fi
+  if [[ -x "/bin/sh" ]]; then
+    printf '%s\n' "/bin/sh"
+    return 0
+  fi
+  if [[ -x "$CHROOT_TERMUX_BIN/sh" ]]; then
+    printf '%s\n' "$CHROOT_TERMUX_BIN/sh"
+    return 0
+  fi
+  local found
+  found="$(command -v sh 2>/dev/null || true)"
+  [[ -n "$found" ]] || return 1
+  printf '%s\n' "$found"
+}
+
+chroot_x11_is_display_ready() {
+  local sock
+  sock="$(chroot_x11_socket_path_display0)"
+  [[ -S "$sock" ]] || return 1
+  chroot_x11_socket_has_listener "$sock"
+}
+
+chroot_x11_wait_ready() {
+  local timeout_sec="${1:-12}"
+  local loops
+  loops=$(( timeout_sec * 10 ))
+  while (( loops > 0 )); do
+    if chroot_x11_is_display_ready; then
+      return 0
+    fi
+    sleep 0.1
+    loops=$((loops - 1))
+  done
+  return 1
+}
+
+chroot_x11_am_launcher() {
+  if [[ -x "$CHROOT_TERMUX_BIN/termux-am" ]]; then
+    printf '%s\n' "$CHROOT_TERMUX_BIN/termux-am"
+    return 0
+  fi
+
+  local found
+  found="$(command -v termux-am 2>/dev/null || true)"
+  if [[ -n "$found" ]]; then
+    printf '%s\n' "$found"
+    return 0
+  fi
+
+  found="$(command -v am 2>/dev/null || true)"
+  [[ -n "$found" ]] || return 1
+  printf '%s\n' "$found"
+}
+
+chroot_x11_current_android_user() {
+  local launcher out
+  launcher="$(chroot_x11_am_launcher || true)"
+  [[ -n "$launcher" ]] || return 1
+
+  out="$("$launcher" get-current-user 2>/dev/null | tr -d '\r\n' || true)"
+  [[ "$out" =~ ^[0-9]+$ ]] || return 1
+  printf '%s\n' "$out"
+}
+
+chroot_x11_try_open_app() {
+  local launcher user_id=""
+  launcher="$(chroot_x11_am_launcher || true)"
+  [[ -n "$launcher" ]] || return 1
+
+  user_id="$(chroot_x11_current_android_user || true)"
+  if [[ -n "$user_id" ]]; then
+    chroot_run_root "$launcher" start --user "$user_id" -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1 || true
+  else
+    chroot_run_root "$launcher" start -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1 || true
+  fi
+  return 0
+}
+
+chroot_x11_spawn_display0() {
+  local shell_bin x11_bin qcmd
+  shell_bin="$(chroot_x11_shell_path)" || return 1
+  x11_bin="$(chroot_x11_bin_path)" || return 1
+
+  if chroot_cmd_exists nohup; then
+    qcmd="$(chroot_quote_cmd nohup "$shell_bin" "$x11_bin" ":0")"
+  else
+    qcmd="$(chroot_quote_cmd "$shell_bin" "$x11_bin" ":0")"
+  fi
+  qcmd+=" >/dev/null 2>&1 </dev/null &"
+  chroot_run_root_cmd "$qcmd"
+}
+
+chroot_x11_stop_existing() {
+  local sock
+  sock="$(chroot_x11_socket_path_display0)"
+
+  if chroot_cmd_exists pkill; then
+    chroot_run_root pkill -f "termux-x11" >/dev/null 2>&1 || true
+    chroot_run_root pkill -f "com.termux.x11" >/dev/null 2>&1 || true
+  fi
+  chroot_run_root rm -f -- "$sock" >/dev/null 2>&1 || true
+  sleep 0.2
+}
+
+chroot_x11_has_running_process() {
+  if chroot_cmd_exists pgrep; then
+    if chroot_run_root pgrep -af "termux-x11|com.termux.x11" >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+chroot_x11_socket_has_listener() {
+  local sock="${1:-}"
+  [[ -n "$sock" ]] || sock="$(chroot_x11_socket_path_display0)"
+  [[ -S "$sock" ]] || return 1
+
+  # Primary check: live UNIX socket entry in kernel table.
+  if [[ -r "/proc/net/unix" ]]; then
+    if awk -v s="$sock" 'NR > 1 && $NF == s {found=1; exit} END {exit(found ? 0 : 1)}' /proc/net/unix 2>/dev/null; then
+      return 0
+    fi
+  fi
+
+  # Fallback check for environments where /proc/net/unix is restricted.
+  if chroot_cmd_exists ss; then
+    if ss -xl 2>/dev/null | grep -F -- "$sock" >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+
+  # Last-resort heuristic: X11 process exists.
+  chroot_x11_has_running_process
+}
+
+chroot_x11_cleanup_stale_socket() {
+  local sock
+  sock="$(chroot_x11_socket_path_display0)"
+  [[ -S "$sock" ]] || return 0
+  if chroot_x11_socket_has_listener "$sock"; then
+    return 0
+  fi
+  if declare -F chroot_log_warn >/dev/null 2>&1; then
+    chroot_log_warn x11 "stale socket detected at $sock; cleaning up"
+  fi
+  chroot_run_root rm -f -- "$sock" >/dev/null 2>&1 || true
+}
+
+chroot_x11_start_display0() {
+  local timeout_sec="${1:-12}"
+
+  chroot_x11_cleanup_stale_socket
+
+  if chroot_x11_is_display_ready; then
+    return 0
+  fi
+
+  chroot_x11_try_open_app || true
+  if chroot_x11_is_display_ready; then
+    return 0
+  fi
+
+  chroot_x11_cleanup_stale_socket
+  if ! chroot_x11_spawn_display0; then
+    return 1
+  fi
+  chroot_x11_wait_ready "$timeout_sec"
+}
+
+chroot_x11_ensure_display0() {
+  local timeout_sec="${1:-12}"
+  if chroot_x11_is_display_ready; then
+    return 0
+  fi
+  chroot_x11_start_display0 "$timeout_sec"
+}
+
+chroot_x11_restart_display0() {
+  local timeout_sec="${1:-15}"
+  chroot_x11_stop_existing
+  chroot_x11_start_display0 "$timeout_sec"
+}
+
+chroot_x11_enable_display0() {
+  local timeout_sec="${1:-15}"
+
+  chroot_x11_cleanup_stale_socket
+
+  # Healthy display already up; do not restart.
+  if chroot_x11_is_display_ready; then
+    return 0
+  fi
+
+  # First try non-destructive start.
+  if chroot_x11_start_display0 "$timeout_sec"; then
+    return 0
+  fi
+
+  # If startup still failed with stale process/socket state, recover by restart.
+  if chroot_x11_has_running_process && ! chroot_x11_is_display_ready; then
+    if chroot_x11_restart_display0 "$timeout_sec"; then
+      return 0
+    fi
+  fi
+
+  return 1
+}
