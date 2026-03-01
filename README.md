@@ -7,6 +7,7 @@ Universal chroot environment manager for rooted Android + Termux.
 <p>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Android%20%2B%20Termux-0f766e?style=flat-square">
   <img alt="Runtime" src="https://img.shields.io/badge/runtime-Bash%20%2B%20Python-1d4ed8?style=flat-square">
+  <img alt="Desktop" src="https://img.shields.io/badge/desktop-XFCE%20%2F%20LXQt-f59e0b?style=flat-square">
   <img alt="Distribution" src="https://img.shields.io/badge/distribution-GitHub%20Releases-111827?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-7c3aed?style=flat-square">
 </p>
@@ -14,6 +15,8 @@ Universal chroot environment manager for rooted Android + Termux.
 </div>
 
 Aurora Chroot is a release-first tool for installing, mounting, entering, backing up, restoring, and managing Linux chroot environments on Android. It ships as a single bundled `chroot` script for end users, while this repository keeps the source split into maintainable Bash and Python parts.
+
+It also includes a built-in desktop GUI workflow, so the same Aurora service layer can manage full Linux desktop sessions alongside shells, mounts, and background services.
 
 ## Interface Preview
 
@@ -42,14 +45,26 @@ Aurora includes a keyboard-first TUI for distro browsing, runtime control, and s
   </tr>
 </table>
 
+## Desktop GUI
+
+Aurora can install and manage full Linux desktop sessions directly from the existing `service` flow.
+
+<p align="center">
+  <a href="docs/screenshots/Desktop.jpg">
+    <img src="docs/screenshots/Desktop.jpg" alt="Aurora desktop GUI running through the desktop service" width="960">
+  </a><br>
+  <sub>Desktop GUI support managed through Aurora's built-in <code>desktop</code> service</sub>
+</p>
+
 ## Why Aurora Chroot
 
 - Release-first distribution: users download one bundled `chroot` file from GitHub Releases.
 - Built for rooted Android + Termux workflows rather than desktop Linux assumptions.
 - Interactive TUI plus direct CLI commands.
+- Built-in desktop GUI support for managed Linux desktop sessions.
 - Session-aware mount, login, exec, service, and removal flows.
 - Backup and restore support for full, rootfs-only, or state-only snapshots.
-- Built-in service installers for `sshd`, `pcbridge`, and distro-specific `zsh` setup.
+- Built-in service installers for `desktop`, `sshd`, `pcbridge`, and distro-specific `zsh` setup.
 - Root-backend detection and preflight diagnostics through `doctor`.
 
 ## Install From A Release
@@ -67,22 +82,48 @@ bash /storage/emulated/0/Download/chroot init
 
 Every time `chroot` is invoked using its full path, Aurora creates or updates the `aurora` launcher so it points to the current `chroot` location.
 
-## Quick Start
-
-Download `chroot` from the latest GitHub Release, then run the first-time setup flow in Termux:
-
-```bash
-termux-setup-storage
-# bash path/to/your/chroot/location init
-bash /storage/emulated/0/Download/chroot init
-```
-
 <p align="left">
   <a href="docs/screenshots/init.jpg">
     <img src="docs/screenshots/init.jpg" alt="Aurora init first-run setup screen" width="360">
   </a><br>
   <sub>First-run setup guide shown by <code>init</code></sub>
 </p>
+
+
+## OR... Just copy paste to termux in order.
+
+> [!TIP]
+> Run the following exactly in order inside Termux.
+
+**1_ Grant storage permission.**
+```bash
+termux-setup-storage
+```
+
+**2_ Refresh mirrors.**
+```bash
+termux-change-repo   # mirror group > all mirrors
+```
+
+**3_ update and upgrade termux packages.**
+```bash
+pkg update && pkg upgrade -y
+```
+
+**4_ Install all required packages.**
+```bash
+pkg install -y bash coreutils curl tar python dialog zstd xz-utils x11-repo && pkg install -y termux-x11-nightly
+```
+
+**5_ bash path/to/your/chroot/location**
+```bash
+bash /storage/emulated/0/Download/chroot
+```
+
+**6_ Done. restart termux and use "aurora" to run commands.**
+```bash
+aurora
+```
 
 ## Command Map
 
@@ -95,6 +136,8 @@ bash /storage/emulated/0/Download/chroot init
 | Data management | `backup`, `restore`, `clear-cache` |
 
 For the full command reference, see [HELP.md](HELP.md).
+
+The `service` command also includes the built-in desktop GUI flow, alongside `sshd`, `pcbridge`, and `zsh`.
 
 ## What The Repo Contains
 

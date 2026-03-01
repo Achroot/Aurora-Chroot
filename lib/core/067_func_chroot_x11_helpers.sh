@@ -91,16 +91,60 @@ chroot_x11_current_android_user() {
 
 chroot_x11_try_open_app() {
   local launcher user_id=""
+  local -a base_args=()
   launcher="$(chroot_x11_am_launcher || true)"
   [[ -n "$launcher" ]] || return 1
 
   user_id="$(chroot_x11_current_android_user || true)"
+
   if [[ -n "$user_id" ]]; then
-    chroot_run_root "$launcher" start --user "$user_id" -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1 || true
-  else
-    chroot_run_root "$launcher" start -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1 || true
+    base_args+=(--user "$user_id")
   fi
-  return 0
+  base_args+=(start)
+
+  if chroot_run_host_user "$launcher" "${base_args[@]}" -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1; then
+    return 0
+  fi
+  chroot_run_root "$launcher" "${base_args[@]}" -n com.termux.x11/com.termux.x11.MainActivity >/dev/null 2>&1 && return 0 || true
+
+  if chroot_run_host_user "$launcher" "${base_args[@]}" -n com.termux.x11/.MainActivity >/dev/null 2>&1; then
+    return 0
+  fi
+  chroot_run_root "$launcher" "${base_args[@]}" -n com.termux.x11/.MainActivity >/dev/null 2>&1 && return 0 || true
+
+  if chroot_run_host_user "$launcher" "${base_args[@]}" -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p com.termux.x11 >/dev/null 2>&1; then
+    return 0
+  fi
+  chroot_run_root "$launcher" "${base_args[@]}" -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p com.termux.x11 >/dev/null 2>&1 && return 0 || true
+
+  if chroot_run_host_user "$launcher" "${base_args[@]}" -a android.intent.action.VIEW -p com.termux.x11 >/dev/null 2>&1; then
+    return 0
+  fi
+  chroot_run_root "$launcher" "${base_args[@]}" -a android.intent.action.VIEW -p com.termux.x11 >/dev/null 2>&1 && return 0 || true
+
+  if chroot_cmd_exists monkey; then
+    chroot_run_host_user monkey -p com.termux.x11 -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 && return 0
+    chroot_run_root monkey -p com.termux.x11 -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 && return 0 || true
+  fi
+
+  return 1
+}
+
+chroot_x11_try_open_app_retry() {
+  local attempts="${1:-6}"
+  local delay_sec="${2:-0.5}"
+  local idx
+
+  [[ "$attempts" =~ ^[0-9]+$ ]] || attempts=6
+  if (( attempts < 1 )); then
+    attempts=1
+  fi
+
+  for (( idx = 0; idx < attempts; idx++ )); do
+    chroot_x11_try_open_app && return 0
+    sleep "$delay_sec"
+  done
+  return 1
 }
 
 chroot_x11_spawn_display0() {
@@ -179,11 +223,6 @@ chroot_x11_start_display0() {
 
   chroot_x11_cleanup_stale_socket
 
-  if chroot_x11_is_display_ready; then
-    return 0
-  fi
-
-  chroot_x11_try_open_app || true
   if chroot_x11_is_display_ready; then
     return 0
   fi

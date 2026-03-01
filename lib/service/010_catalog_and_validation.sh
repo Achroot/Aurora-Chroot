@@ -32,6 +32,7 @@ chroot_service_list_defs() {
 }
 
 chroot_service_builtin_ids() {
+  printf 'desktop\n'
   printf 'pcbridge\n'
   printf 'sshd\n'
   printf 'zsh\n'
@@ -41,6 +42,9 @@ chroot_service_builtin_resolve() {
   local builtin_id="${1:-}"
   builtin_id="${builtin_id,,}"
   case "$builtin_id" in
+    desktop)
+      printf 'desktop\t%s\t%s\n' "$CHROOT_SERVICE_DESKTOP_COMMAND" "$(chroot_service_desktop_description)"
+      ;;
     pcbridge)
       printf 'pcbridge\t/usr/local/sbin/aurora-pcbridge-start\tWSL-first file bridge (bootstrap + key-only SFTP + TUI client)\n'
       ;;
@@ -59,6 +63,13 @@ chroot_service_builtin_resolve() {
 chroot_service_builtin_catalog_json() {
   cat <<'JSON'
 [
+  {
+    "id": "desktop",
+    "service_name": "desktop",
+    "command": "/usr/local/sbin/aurora-desktop-launch",
+    "description": "Managed desktop session (XFCE or LXQt over Termux-X11)",
+    "requires_profile": true
+  },
   {
     "id": "pcbridge",
     "service_name": "pcbridge",

@@ -11,6 +11,7 @@ chroot_default_settings_json() {
   "data_bind": false,
   "android_full_bind": false,
   "x11": false,
+  "x11_dpi": 160,
   "download_retries": 3,
   "download_timeout_sec": 20,
   "log_retention_days": 14

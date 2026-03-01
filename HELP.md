@@ -69,16 +69,6 @@ Notes:
 - `--json` also includes portability selftest summary and root-backend probe trace (candidates tried and why they were accepted/rejected).
 - Tool diagnostics report effective `chroot`/`mount`/`umount` backends, including BusyBox applet fallback when selected.
 
-### `status [--all|--distro <id>] [--json] [--live]`
-
-Displays an overview of installed distros, active sessions, and mount states.
-
-- Without args: table for all installed distros, followed by per-session details (session id/pid/state/mode/start/cmd) for each distro with recorded sessions.
-- `--all`: same as the default (all installed distros).
-- `--distro <id>`: only report a single distro if installed.
-- `--json`: JSON report including cache size and `safe_to_remove`/`rootfs_mounts`.
-- `--live`: with `--json`, adds per-distro live diagnostics (`live.active_sessions`, `live.active_mounts`, stale counters, and raw log-entry counts).
-
 ### `distros [--json] [--refresh] [--install <id> --version <release>]`
 
 Opens the interactive distro catalog to browse, fetch, and install new Linux environments.
@@ -98,31 +88,6 @@ Notes:
 - This replaces the previous separate `fetch`, `list`, and `install` flow.
 - On successful install, Aurora adds/updates the distro alias in managed Termux rc profile block(s) and prints which profile(s) were updated plus login hint.
 
-### `settings [set <key> <value>] [--json]`
-
-Configures system preferences like mounts, timeouts, and logging behavior.
-
-- Without args: prints a table with `current`, `allowed`, `status`, and description.
-- `--json`: prints merged schema + current values JSON.
-- `set <key> <value>`: validates value against allowed type/range/choices, then writes atomically.
-
-Allowed keys and values:
-- `termux_home_bind`: `true|false` (default `false`)
-- `android_storage_bind`: `true|false` (default `false`)
-- `data_bind`: `true|false` (default `false`)
-- `android_full_bind`: `true|false` (default `false`; binds core Android partitions plus detected `*_dlkm` and common vendor top-level mounts)
-- `x11`: `true|false` (bind Termux-X11 socket + inject `DISPLAY=:0`; setting to `true` restarts display `:0`)
-- `download_retries`: integer `1..10`
-- `download_timeout_sec`: integer `5..300`
-- `log_retention_days`: integer `1..365`
-
-### `logs [--tail <N>]`
-
-Displays recent action logs for debugging and system auditing.
-
-- Without args: prints the last 120 lines.
-- `--tail <N>`: prints the last N lines (`N` must be a positive integer).
-
 ### `install-local <distro> --file <path> [--sha256 <hex>]`
 
 Installs a custom Linux distribution directly from a local tarball archive.
@@ -135,6 +100,16 @@ Behavior notes:
 - Uses the same staging/extract flow as manifest-based installs.
 - On successful install, Aurora adds/updates the distro alias in managed Termux rc profile block(s) and prints which profile(s) were updated plus login hint.
 
+### `status [--all|--distro <id>] [--json] [--live]`
+
+Displays an overview of installed distros, active sessions, and mount states.
+
+- Without args: table for all installed distros, followed by per-session details (session id/pid/state/mode/start/cmd) for each distro with recorded sessions.
+- `--all`: same as the default (all installed distros).
+- `--distro <id>`: only report a single distro if installed.
+- `--json`: JSON report including cache size and `safe_to_remove`/`rootfs_mounts`.
+- `--live`: with `--json`, adds per-distro live diagnostics (`live.active_sessions`, `live.active_mounts`, stale counters, and raw log-entry counts).
+
 ### `service <distro> [action] [args...]`
 
 Manages persistent background services and daemons without a traditional init system.
@@ -143,6 +118,8 @@ Manages persistent background services and daemons without a traditional init sy
 - `status`: Alias of `list`.
 - `add <name> <command>`: Creates a new service definition. The command must run the daemon in the foreground.
 - `install [<builtin-id>]`: Installs a built-in service definition. With no id in interactive terminals, shows a picker. Use `install --json` to list built-ins for scripting/TUI.
+- `install desktop --profiles --json`: Returns desktop install metadata, including host RAM, requirement state, and the `lxqt` / `xfce` profile recommendations.
+- `install desktop --profile <xfce|lxqt> [--reinstall]`: Installs or refreshes the managed desktop service inside the selected distro.
 - `start <name>`: Spawns the service in the background, detached from the terminal, and records its PID. Fails if the process exits immediately after launch.
 - `stop <name>`: Gracefully stops the service (SIGTERM), falling back to SIGKILL if necessary.
 - `restart <name>`: Stops and then starts the service.
@@ -159,6 +136,7 @@ Behavior notes:
 - If `remove` is called without a name in an interactive terminal, it shows a numbered service picker.
 - `remove` prints what it will remove (tracked session id + service definition file path) before deletion.
 - Built-in catalog currently includes:
+  - `desktop`: installs `state/<distro>/services/desktop.json`, `/usr/local/sbin/aurora-desktop-launch`, and `/etc/aurora-desktop/profile.{env,json}`. Supports `lxqt` and `xfce` profiles on installed distros that Aurora detects as Ubuntu-family (`apt`/`apt-get`) or Arch-family (`pacman`), including compatible local/custom installs. Other distros are unsupported. Requires `settings x11=true`. Install uses host RAM thresholds to recommend or block profiles before package installation. Re-running install with the same profile is safe and refreshes/repairs the managed desktop assets. Switching to a different profile requires `--reinstall` in non-interactive mode. Runtime is managed with the normal `service start|stop|restart|remove desktop` flow over Termux-X11.
   - `sshd`: installs `state/<distro>/services/sshd.json` + `/usr/local/sbin/aurora-sshd-start`.
   - `pcbridge`: installs `state/<distro>/services/pcbridge.json` + `/usr/local/sbin/aurora-pcbridge-start`.
   - `zsh`: install-only (Arch Linux and Ubuntu ONLY; no service definition, no daemon). Detects the distro's package manager (pacman → Arch, apt → Ubuntu) and installs Zsh with zsh-autocomplete, zsh-autosuggestions, fzf, and fd. Upgrades system packages as part of install (pacman -Syu / apt upgrade). Configures .zshrc (prompt, completions, keybindings, aliases), patches .bashrc for compatibility, sets up bash-to-zsh login handoff, and changes root's login shell. Idempotent: safe to run multiple times without overwriting existing .zshrc blocks (plugins are updated to latest). Since `zsh` is install-only, `service start/stop/restart/remove` do not apply to it. Other distros are not supported and will fail with an error. In TUI, selecting zsh install switches to live output mode.
@@ -176,6 +154,8 @@ Behavior notes:
 - In normal mode (`s`), if no paired key exists in `/etc/aurora-pcbridge/authorized_keys`, start/restart aborts with an instruction to rerun and choose `f` first.
 - In TUI, selecting `service` action `start`/`stop`/`restart`/`remove` shows a service-name selector populated from `service <distro> list --json`.
 - In TUI, selecting `service` action `install` shows a built-in selector populated from `service <distro> install --json`.
+- In TUI, selecting built-in `desktop` reveals a `Desktop profile` selector backed by `service <distro> install desktop --profiles --json`.
+- `service remove desktop` removes Aurora-managed desktop service/config assets only; it does not purge the desktop packages from the distro.
 
 ### `sessions <distro> [action] [args...]`
 
@@ -278,6 +258,42 @@ Behavior notes:
 - Rewrites distro state flags after restore.
 - When restore includes rootfs data and succeeds, Aurora adds/updates the distro alias in managed Termux rc profile block(s) and prints which profile(s) were updated plus login hint.
 
+### `settings [set <key> <value>] [--json]`
+
+Configures system preferences like mounts, timeouts, and logging behavior.
+
+- Without args: prints a table with `current`, `allowed`, `status`, and description.
+- `--json`: prints merged schema + current values JSON.
+- `set <key> <value>`: validates value against allowed type/range/choices, then writes atomically.
+
+Allowed keys and values:
+- `termux_home_bind`: `true|false` (default `false`)
+- `android_storage_bind`: `true|false` (default `false`)
+- `data_bind`: `true|false` (default `false`)
+- `android_full_bind`: `true|false` (default `false`; binds core Android partitions plus detected `*_dlkm` and common vendor top-level mounts)
+- `x11`: `true|false` (bind Termux-X11 socket + inject `DISPLAY=:0`; setting to `true` restarts display `:0`)
+- `x11_dpi`: integer `96..480` (default `160`; exported as `QT_FONT_DPI` / `AURORA_X11_DPI`)
+- `download_retries`: integer `1..10`
+- `download_timeout_sec`: integer `5..300`
+- `log_retention_days`: integer `1..365`
+
+### `logs [--tail <N>]`
+
+Displays recent action logs for debugging and system auditing.
+
+- Without args: prints the last 120 lines.
+- `--tail <N>`: prints the last N lines (`N` must be a positive integer).
+
+### `clear-cache [--all|--older-than <days>] [--yes]`
+
+Frees up device storage by deleting cached downloads and disposable runtime files.
+
+- Without args: removes files older than 14 days.
+- `--older-than <days>`: custom age cutoff (`days` must be a positive integer).
+- `--all`: deletes cached tarballs, Aurora tmp workspace files, interrupted install staging directories, and stale runtime logs that are no longer attached to active mounts or desktop sessions.
+- `--yes`: with `--all`, skips the typed confirmation prompt.
+- `--all` does not remove backups, settings, installed distro state, or retained action logs.
+
 ### `remove [<distro>] [--full]`
 
 Deletes an installed distro completely, including its rootfs, state, and optional cached files.
@@ -307,12 +323,3 @@ Behavior notes:
 - Kills active tracked sessions by default before unmount/removal.
 - Uses unmount + mount verification safety checks.
 - Aborts if sessions remain active, unmount fails, or any mounts remain active.
-
-### `clear-cache [--all|--older-than <days>] [--yes]`
-
-Frees up device storage by deleting old or downloaded distro tarballs from the cache.
-
-- Without args: removes files older than 14 days.
-- `--older-than <days>`: custom age cutoff (`days` must be a positive integer).
-- `--all`: deletes all cached tarballs.
-- `--yes`: with `--all`, skips the typed confirmation prompt.

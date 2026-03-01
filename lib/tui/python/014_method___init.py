@@ -18,6 +18,8 @@
         self.active_command = self.commands[0]
         self.form_values = {}
         self.form_index = 0
+        self.form_panel_focus = "left"
+        self.preview_scroll = 0
 
         self.result_command = ""
         self.result_exit_code = 0
@@ -29,6 +31,7 @@
         self.result_rerun_cmd = None
         self.result_rerun_stdin = ""
         self.result_rerun_interactive = False
+        self.last_capture_used_live_output = False
 
         self.distros_catalog = []
         self.distros_runtime_root = ""
@@ -41,6 +44,9 @@
         self.settings_rows = []
         self.settings_index = 0
         self.settings_pending = {}
+        self.service_payload_data = None
+        self.service_builtin_payload_data = None
+        self.desktop_profile_payload_data = None
 
         self.status_message = ""
         self.status_kind = "info"

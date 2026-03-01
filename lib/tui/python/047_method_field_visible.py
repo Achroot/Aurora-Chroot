@@ -1,12 +1,17 @@
     def field_visible(self, field):
+        def condition_matches(condition):
+            current = self.form_values.get(condition.get("id"))
+            expected = condition.get("equals")
+            if isinstance(expected, (list, tuple, set)):
+                return current in expected
+            return current == expected
+
         show_if = field.get("show_if")
         if show_if:
-            current = self.form_values.get(show_if.get("id"))
-            expected = show_if.get("equals")
-            if isinstance(expected, (list, tuple, set)):
-                if current not in expected:
+            if isinstance(show_if, dict) and "all" in show_if:
+                if not all(condition_matches(condition) for condition in show_if.get("all", [])):
                     return False
-            elif current != expected:
+            elif not condition_matches(show_if):
                 return False
         show_if_not = field.get("show_if_not")
         if show_if_not:
@@ -18,4 +23,3 @@
             elif current == blocked:
                 return False
         return True
-

@@ -40,6 +40,15 @@ chroot_settings_schema_json() {
       "description": "Enable Termux-X11 socket bind and DISPLAY=:0 injection for GUI apps."
     },
     {
+      "key": "x11_dpi",
+      "type": "int",
+      "min": 96,
+      "max": 480,
+      "default": 160,
+      "status": "active",
+      "description": "Preferred X11 DPI exported to GUI sessions as QT_FONT_DPI."
+    },
+    {
       "key": "download_retries",
       "type": "int",
       "min": 1,

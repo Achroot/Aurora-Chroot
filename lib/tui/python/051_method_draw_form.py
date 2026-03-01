@@ -1,16 +1,43 @@
+    def form_panel_layout(self, height, width):
+        content_top = 2
+        content_height = height - content_top - 3
+        if self.active_command == "exec":
+            left_width = max(38, int(width * 0.60))
+        else:
+            left_width = max(28, int(width * 0.46))
+        right_left = left_width + 2
+        right_width = width - right_left - 1
+        return content_top, content_height, left_width, right_left, right_width
+
     def draw_form(self, height, width):
         if self.active_command == "exec":
             self.draw_exec_form(height, width)
             return
 
-        content_top = 2
-        content_height = height - content_top - 3
-        left_width = max(28, int(width * 0.46))
-        right_left = left_width + 2
-        right_width = width - right_left - 1
+        content_top, content_height, left_width, right_left, right_width = self.form_panel_layout(height, width)
+        options_active = self.form_panel_focus != "right"
+        preview_active = self.form_panel_focus == "right"
 
-        draw_box(self.stdscr, content_top, 0, content_height, left_width, f"OPTIONS: {self.active_command}", self.color(4), self.color(1, curses.A_BOLD))
-        draw_box(self.stdscr, content_top, right_left, content_height, right_width, "PREVIEW / DOCS", self.color(4), self.color(1, curses.A_BOLD))
+        draw_box(
+            self.stdscr,
+            content_top,
+            0,
+            content_height,
+            left_width,
+            f"OPTIONS: {self.active_command}{' [ACTIVE]' if options_active else ''}",
+            self.color(2) if options_active else self.color(4),
+            self.color(2, curses.A_BOLD) if options_active else self.color(1, curses.A_BOLD),
+        )
+        draw_box(
+            self.stdscr,
+            content_top,
+            right_left,
+            content_height,
+            right_width,
+            f"PREVIEW / DOCS{' [ACTIVE]' if preview_active else ''}",
+            self.color(2) if preview_active else self.color(4),
+            self.color(2, curses.A_BOLD) if preview_active else self.color(1, curses.A_BOLD),
+        )
 
         fields = self.visible_fields()
         if self.form_index >= len(fields):
@@ -31,4 +58,3 @@
             addstr_clipped(self.stdscr, list_top, 2, "No options for this command.", left_width - 4, self.color(6))
 
         self.draw_preview_panel(content_top, right_left, right_width, content_height)
-

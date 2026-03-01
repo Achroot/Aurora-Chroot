@@ -110,7 +110,7 @@
                     },
                     {
                         "id": "service_pick",
-                        "label": "Service (select existing)",
+                        "label": "Service",
                         "type": "choice",
                         "choices": [("", "<loading services>")],
                         "default": "",
@@ -125,11 +125,36 @@
                     },
                     {
                         "id": "service_builtin",
-                        "label": "Built-in service (for install)",
+                        "label": "Built-in service",
                         "type": "choice",
                         "choices": [("", "<loading built-ins>")],
                         "default": "",
                         "show_if": {"id": "action", "equals": "install"},
+                    },
+                    {
+                        "id": "desktop_profile",
+                        "label": "Desktop profile",
+                        "type": "choice",
+                        "choices": [("", "<loading desktop profiles>")],
+                        "default": "",
+                        "show_if": {
+                            "all": [
+                                {"id": "action", "equals": "install"},
+                                {"id": "service_builtin", "equals": "desktop"},
+                            ]
+                        },
+                    },
+                    {
+                        "id": "desktop_reinstall",
+                        "label": "Allow profile switch / reinstall",
+                        "type": "bool",
+                        "default": False,
+                        "show_if": {
+                            "all": [
+                                {"id": "action", "equals": "install"},
+                                {"id": "service_builtin", "equals": "desktop"},
+                            ]
+                        },
                     },
                     {
                         "id": "service_cmd",
@@ -300,6 +325,7 @@
                 "about": "Danger: remove all Aurora runtime data (distros/backups/cache/state).",
             },
             "clear-cache": {
+                "about": "Remove cached downloads or, with all, disposable runtime files like tmp leftovers, staging dirs, and stale runtime logs.",
                 "fields": [
                     {
                         "id": "strategy",
@@ -308,7 +334,7 @@
                         "choices": [
                             ("default", "Older than 14 days"),
                             ("older", "Custom age"),
-                            ("all", "Delete everything"),
+                            ("all", "Delete all disposable files"),
                         ],
                         "default": "default",
                     },

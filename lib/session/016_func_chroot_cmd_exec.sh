@@ -21,14 +21,12 @@ chroot_cmd_exec() {
   rootfs="$(chroot_distro_rootfs_dir "$distro")"
   session_id="$(chroot_now_compact)-$$"
 
-  local term_value path_value lang_value host_sh display_value
+  local term_value path_value lang_value host_sh display_value dpi_value
   term_value="${TERM:-xterm-256color}"
   path_value="$(chroot_chroot_default_path)"
   lang_value="${LANG:-C.UTF-8}"
-  display_value=""
-  if chroot_x11_enabled; then
-    display_value=":0"
-  fi
+  display_value="$(chroot_gui_display_value || true)"
+  dpi_value="$(chroot_x11_dpi_value || true)"
   host_sh="${CHROOT_HOST_SH:-}"
   if [[ -z "$host_sh" || ! -x "$host_sh" ]]; then
     host_sh="$(chroot_detect_pick_path "${CHROOT_HOST_SH:-}" "sh" \
@@ -56,24 +54,27 @@ term_value="$2"
 path_value="$3"
 lang_value="$4"
 display_value="$5"
-rootfs="$6"
-shell_bin="$7"
-chroot_bin="$8"
-chroot_subcmd="$9"
-shift 9
+dpi_value="$6"
+rootfs="$7"
+shell_bin="$8"
+chroot_bin="${9}"
+chroot_subcmd="${10}"
+shift 10
 
 launch_direct() {
   echo "$$" > "$pid_file"
   if [ -n "$chroot_subcmd" ]; then
-    if [ -n "$display_value" ]; then
-      exec env -i HOME=/root TERM="$term_value" PATH="$path_value" LANG="$lang_value" DISPLAY="$display_value" "$chroot_bin" "$chroot_subcmd" "$rootfs" "$@"
-    fi
-    exec env -i HOME=/root TERM="$term_value" PATH="$path_value" LANG="$lang_value" "$chroot_bin" "$chroot_subcmd" "$rootfs" "$@"
+    exec env -i HOME=/root TERM="$term_value" PATH="$path_value" LANG="$lang_value" \
+      ${display_value:+DISPLAY="$display_value"} \
+      ${dpi_value:+AURORA_X11_DPI="$dpi_value"} \
+      ${dpi_value:+QT_FONT_DPI="$dpi_value"} \
+      "$chroot_bin" "$chroot_subcmd" "$rootfs" "$@"
   fi
-  if [ -n "$display_value" ]; then
-    exec env -i HOME=/root TERM="$term_value" PATH="$path_value" LANG="$lang_value" DISPLAY="$display_value" "$chroot_bin" "$rootfs" "$@"
-  fi
-  exec env -i HOME=/root TERM="$term_value" PATH="$path_value" LANG="$lang_value" "$chroot_bin" "$rootfs" "$@"
+  exec env -i HOME=/root TERM="$term_value" PATH="$path_value" LANG="$lang_value" \
+    ${display_value:+DISPLAY="$display_value"} \
+    ${dpi_value:+AURORA_X11_DPI="$dpi_value"} \
+    ${dpi_value:+QT_FONT_DPI="$dpi_value"} \
+    "$chroot_bin" "$rootfs" "$@"
 }
 
 if command -v setsid >/dev/null 2>&1; then
@@ -84,22 +85,25 @@ term_value="$2"
 path_value="$3"
 lang_value="$4"
 display_value="$5"
-rootfs="$6"
-chroot_bin="$7"
-chroot_subcmd="$8"
-shift 8
+dpi_value="$6"
+rootfs="$7"
+chroot_bin="$8"
+chroot_subcmd="${9}"
+shift 9
 echo "$$" > "$pid_file"
 if [ -n "$chroot_subcmd" ]; then
-  if [ -n "$display_value" ]; then
-    exec env -i HOME=/root TERM="$term_value" PATH="$path_value" LANG="$lang_value" DISPLAY="$display_value" "$chroot_bin" "$chroot_subcmd" "$rootfs" "$@"
-  fi
-  exec env -i HOME=/root TERM="$term_value" PATH="$path_value" LANG="$lang_value" "$chroot_bin" "$chroot_subcmd" "$rootfs" "$@"
+  exec env -i HOME=/root TERM="$term_value" PATH="$path_value" LANG="$lang_value" \
+    ${display_value:+DISPLAY="$display_value"} \
+    ${dpi_value:+AURORA_X11_DPI="$dpi_value"} \
+    ${dpi_value:+QT_FONT_DPI="$dpi_value"} \
+    "$chroot_bin" "$chroot_subcmd" "$rootfs" "$@"
 fi
-if [ -n "$display_value" ]; then
-  exec env -i HOME=/root TERM="$term_value" PATH="$path_value" LANG="$lang_value" DISPLAY="$display_value" "$chroot_bin" "$rootfs" "$@"
-fi
-exec env -i HOME=/root TERM="$term_value" PATH="$path_value" LANG="$lang_value" "$chroot_bin" "$rootfs" "$@"
-' sh "$pid_file" "$term_value" "$path_value" "$lang_value" "$display_value" "$rootfs" "$chroot_bin" "$chroot_subcmd" "$@"
+exec env -i HOME=/root TERM="$term_value" PATH="$path_value" LANG="$lang_value" \
+  ${display_value:+DISPLAY="$display_value"} \
+  ${dpi_value:+AURORA_X11_DPI="$dpi_value"} \
+  ${dpi_value:+QT_FONT_DPI="$dpi_value"} \
+  "$chroot_bin" "$rootfs" "$@"
+' sh "$pid_file" "$term_value" "$path_value" "$lang_value" "$display_value" "$dpi_value" "$rootfs" "$chroot_bin" "$chroot_subcmd" "$@"
 fi
 
 launch_direct "$@"
@@ -107,7 +111,7 @@ SH
   chmod 0700 "$launcher_script"
 
   chroot_log_info exec "start distro=$distro cmd=$cmd_str session=$session_id"
-  chroot_run_root "$host_sh" "$launcher_script" "$pid_file" "$term_value" "$path_value" "$lang_value" "$display_value" "$rootfs" "$host_sh" "$chroot_backend_bin" "$chroot_backend_subcmd" "${exec_cmd[@]}" &
+  chroot_run_root "$host_sh" "$launcher_script" "$pid_file" "$term_value" "$path_value" "$lang_value" "$display_value" "$dpi_value" "$rootfs" "$host_sh" "$chroot_backend_bin" "$chroot_backend_subcmd" "${exec_cmd[@]}" &
   launcher_pid=$!
   tracked_pid="$launcher_pid"
 

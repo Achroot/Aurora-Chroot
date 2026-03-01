@@ -21,10 +21,32 @@ chroot_service_find_pid_in_distro() {
   printf '%s\n' "$pid"
 }
 
+chroot_service_maybe_mark_desktop_start_error() {
+  local distro="$1"
+  local name="$2"
+  local message="$3"
+  local excerpt=""
+
+  if [[ "${name,,}" != "${CHROOT_SERVICE_DESKTOP_SERVICE_NAME:-desktop}" ]]; then
+    return 0
+  fi
+  declare -F chroot_service_desktop_mark_error >/dev/null 2>&1 || return 0
+
+  if declare -F chroot_service_desktop_runtime_log_excerpt >/dev/null 2>&1; then
+    excerpt="$(chroot_service_desktop_runtime_log_excerpt "$distro" 2>/dev/null || true)"
+  fi
+  if [[ -n "$excerpt" ]]; then
+    message="$message: $excerpt"
+  fi
+
+  chroot_service_desktop_mark_error "$distro" "$message"
+}
+
 chroot_service_start() {
   local distro="$1"
   local name="$2"
   local cmd_prefix="${3:-}"
+  local log_file="${4:-}"
 
   chroot_require_service_name "$name"
 
@@ -41,6 +63,11 @@ chroot_service_start() {
   if existing_pid="$(chroot_service_get_pid "$distro" "$name")"; then
     chroot_info "Service '$name' is already running (PID: $existing_pid)"
     return 0
+  fi
+
+  if [[ -n "$log_file" ]]; then
+    mkdir -p "$(dirname "$log_file")"
+    rm -f -- "$log_file"
   fi
 
   # Remove stale service entries before attempting a fresh start.
@@ -68,6 +95,8 @@ rootfs = sys.argv[3]
 cmd_str = sys.argv[4]
 default_path = sys.argv[5]
 display_value = sys.argv[6] if len(sys.argv) > 6 else ""
+dpi_value = sys.argv[7] if len(sys.argv) > 7 else ""
+log_path = sys.argv[8] if len(sys.argv) > 8 else ""
 
 pid = os.fork()
 if pid > 0:
@@ -84,8 +113,25 @@ if pid > 0:
 
 devnull = os.open("/dev/null", os.O_RDWR)
 os.dup2(devnull, 0)
-os.dup2(devnull, 1)
-os.dup2(devnull, 2)
+
+log_fd = None
+if log_path:
+    try:
+        log_dir = os.path.dirname(log_path)
+        if log_dir:
+            os.makedirs(log_dir, exist_ok=True)
+        log_fd = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+    except Exception:
+        log_fd = None
+
+if log_fd is None:
+    os.dup2(devnull, 1)
+    os.dup2(devnull, 2)
+else:
+    os.dup2(log_fd, 1)
+    os.dup2(log_fd, 2)
+    os.close(log_fd)
+
 os.close(devnull)
 
 env = {
@@ -96,6 +142,9 @@ env = {
 }
 if display_value:
     env["DISPLAY"] = display_value
+if dpi_value:
+    env["AURORA_X11_DPI"] = dpi_value
+    env["QT_FONT_DPI"] = dpi_value
 
 args = [chroot_bin]
 if chroot_subcmd:
@@ -106,16 +155,14 @@ EOF_PY
 
   local path_value
   path_value="$(chroot_chroot_default_path)"
-  local display_value
-  display_value=""
-  if chroot_x11_enabled; then
-    display_value=":0"
-  fi
+  local display_value dpi_value
+  display_value="$(chroot_gui_display_value || true)"
+  dpi_value="$(chroot_x11_dpi_value || true)"
 
   local svc_pid
   local start_rc=0
   set +e
-  svc_pid="$(chroot_run_root "$CHROOT_PYTHON_BIN" "$tmp_script" "$chroot_backend_bin" "$chroot_backend_subcmd" "$rootfs" "$runtime_cmd" "$path_value" "$display_value")"
+  svc_pid="$(chroot_run_root "$CHROOT_PYTHON_BIN" "$tmp_script" "$chroot_backend_bin" "$chroot_backend_subcmd" "$rootfs" "$runtime_cmd" "$path_value" "$display_value" "$dpi_value" "$log_file")"
   start_rc=$?
   set -e
   rm -f -- "$tmp_script"
@@ -144,6 +191,7 @@ EOF_PY
       sleep 1
       chroot_run_root kill -KILL "$svc_pid" 2>/dev/null || true
       chroot_session_remove "$distro" "svc-$name"
+      chroot_service_maybe_mark_desktop_start_error "$distro" "$name" "desktop session exited immediately after start"
       chroot_log_error service "start-check-failed distro=$distro service=$name pid=$svc_pid cmd=$runtime_cmd"
       chroot_die "Service '$name' exited immediately after start"
     fi
@@ -151,6 +199,7 @@ EOF_PY
     chroot_log_info service "start distro=$distro service=$name pid=$svc_pid cmd=$runtime_cmd"
     chroot_info "Service '$name' started (PID: $svc_pid)"
   else
+    chroot_service_maybe_mark_desktop_start_error "$distro" "$name" "failed to launch desktop session"
     chroot_log_error service "failed to start distro=$distro service=$name cmd=$runtime_cmd"
     chroot_die "Failed to start service '$name'"
   fi

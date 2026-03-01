@@ -142,6 +142,8 @@ chroot_service_builtin_is_install_only() {
 chroot_service_install_builtin() {
   local distro="$1"
   local builtin_id="${2:-}"
+  local desktop_profile="${3:-}"
+  local desktop_reinstall="${4:-0}"
   local resolved svc_name cmd_str desc def_file existing_cmd
   local already_installed=0
 
@@ -149,6 +151,11 @@ chroot_service_install_builtin() {
   resolved="$(chroot_service_builtin_resolve "$builtin_id" || true)"
   [[ -n "$resolved" ]] || chroot_die "unknown built-in service: $builtin_id"
   IFS=$'\t' read -r svc_name cmd_str desc <<<"$resolved"
+
+  if [[ "$builtin_id" == "desktop" ]]; then
+    chroot_service_desktop_install "$distro" "$desktop_profile" "$desktop_reinstall"
+    return 0
+  fi
 
   if chroot_service_builtin_is_install_only "$builtin_id"; then
     chroot_service_builtin_install_assets "$distro" "$builtin_id"

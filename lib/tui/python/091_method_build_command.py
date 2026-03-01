@@ -61,6 +61,11 @@
             elif action == "install":
                 builtin_id = self.require_text("service_builtin", "Built-in service")
                 args.append(builtin_id)
+                if str(builtin_id).strip().lower() == "desktop":
+                    desktop_profile = self.require_text("desktop_profile", "Desktop profile")
+                    args.extend(["--profile", desktop_profile])
+                    if self.form_values.get("desktop_reinstall"):
+                        args.append("--reinstall")
             elif action == "remove":
                 svc_name = self.read_text("service_pick")
                 if svc_name:

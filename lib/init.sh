@@ -20,7 +20,7 @@ chroot_cmd_init() {
 
 ─── Step 2: Install required packages ─────────────────
 
-    pkg install -y bash coreutils curl tar python dialog zstd xz-utils x11-repo termux-x11-nightly
+    pkg install -y bash coreutils curl tar python dialog zstd xz-utils x11-repo && pkg install -y termux-x11-nightly
 
 EOF_INIT
 

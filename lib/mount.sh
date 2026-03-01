@@ -646,6 +646,11 @@ chroot_cmd_unmount() {
   chroot_lock_acquire "distro-$distro" || chroot_die "failed distro lock"
 
   if (( kill_sessions == 1 )); then
+    if chroot_service_desktop_session_is_tracked "$distro"; then
+      chroot_info "Stopping desktop service before session cleanup..."
+      chroot_service_desktop_stop "$distro"
+    fi
+
     local kill_out kill_rc targeted term_sent kill_sent cleaned skipped_identity
     kill_rc=0
     kill_out="$(chroot_session_kill_all "$distro" 3)" || kill_rc=$?

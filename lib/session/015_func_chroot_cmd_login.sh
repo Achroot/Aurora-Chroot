@@ -17,9 +17,10 @@ chroot_cmd_login() {
   term_value="${TERM:-xterm-256color}"
   path_value="$(chroot_chroot_default_path)"
   env_pairs=("HOME=/root" "TERM=$term_value" "PATH=$path_value" "LANG=${LANG:-C.UTF-8}")
-  if chroot_x11_enabled; then
-    env_pairs+=("DISPLAY=:0")
-  fi
+  while IFS= read -r env_pair; do
+    [[ -n "$env_pair" ]] || continue
+    env_pairs+=("$env_pair")
+  done < <(chroot_gui_env_pairs)
 
   session_id="$(chroot_now_compact)-$$"
   chroot_session_add "$distro" "$session_id" "login" "interactive" "$$"

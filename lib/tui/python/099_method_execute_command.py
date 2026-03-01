@@ -18,5 +18,5 @@
             rerun_cmd=cmd,
             rerun_stdin=stdin_data,
             rerun_interactive=interactive,
+            start_at_end=bool(interactive or self.last_capture_used_live_output),
         )
-

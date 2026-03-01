@@ -30,6 +30,8 @@
             command = str(row.get("command", "")).strip()
             description = str(row.get("description", "")).strip()
             label = f"{builtin_id} -> {service_name}"
+            if row.get("requires_profile"):
+                label = f"{label} profile:required"
             if command:
                 label = f"{label} cmd:{command}"
             if description:

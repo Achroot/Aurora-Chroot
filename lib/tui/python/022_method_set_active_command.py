@@ -1,5 +1,10 @@
     def set_active_command(self, command):
         self.active_command = command
+        self.form_panel_focus = "left"
+        self.preview_scroll = 0
+        self.service_payload_data = None
+        self.service_builtin_payload_data = None
+        self.desktop_profile_payload_data = None
         spec = self.get_spec(command)
         self.form_values = {}
         for field in spec.get("fields", []):
@@ -13,6 +18,7 @@
         if command == "service":
             self.refresh_service_choices(show_error=False)
             self.refresh_service_builtin_choices(show_error=False)
+            self.clear_desktop_profile_state()
         if command == "sessions":
             self.refresh_session_choices(show_error=False)
         if command == "restore":

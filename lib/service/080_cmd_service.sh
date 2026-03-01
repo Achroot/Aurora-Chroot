@@ -49,10 +49,12 @@ PY
     install)
       local builtin_id="${1:-}"
       if [[ "$builtin_id" == "--json" ]]; then
+        [[ $# -eq 1 ]] || chroot_die "service install --json does not accept extra arguments"
         chroot_service_builtin_catalog_json
         return 0
       fi
       if [[ "$builtin_id" == "--list" ]]; then
+        [[ $# -eq 1 ]] || chroot_die "service install --list does not accept extra arguments"
         chroot_service_builtin_list_human
         return 0
       fi
@@ -66,6 +68,59 @@ PY
           0) ;;
           2) chroot_die "no built-in services available" ;;
           *) chroot_die "service install aborted" ;;
+        esac
+      else
+        shift || true
+      fi
+      if [[ "$builtin_id" == "desktop" ]]; then
+        local profile_id="" reinstall=0
+        while [[ $# -gt 0 ]]; do
+          case "$1" in
+            --profiles)
+              if [[ -n "$profile_id" || "$reinstall" == "1" ]]; then
+                chroot_die "desktop profile query cannot be combined with --profile or --reinstall"
+              fi
+              shift || true
+              [[ "${1:-}" == "--json" && $# -eq 1 ]] || chroot_die "desktop profile query requires: service $distro install desktop --profiles --json"
+              chroot_service_desktop_profiles_json "$distro"
+              return 0
+              ;;
+            --profile)
+              shift || true
+              [[ -n "${1:-}" ]] || chroot_die "desktop install requires a value after --profile"
+              [[ -z "$profile_id" ]] || chroot_die "desktop install profile was provided more than once"
+              profile_id="$1"
+              shift || true
+              ;;
+            --reinstall)
+              reinstall=1
+              shift || true
+              ;;
+            --json)
+              chroot_die "desktop profile query requires: service $distro install desktop --profiles --json"
+              ;;
+            --list)
+              chroot_die "--list is only valid as: service $distro install --list"
+              ;;
+            *)
+              chroot_die "unknown desktop install argument: $1"
+              ;;
+          esac
+        done
+        if [[ "$reinstall" == "1" && -z "$profile_id" ]]; then
+          chroot_die "desktop --reinstall requires --profile <xfce|lxqt>"
+        fi
+        chroot_service_install_builtin "$distro" "$builtin_id" "$profile_id" "$reinstall"
+        return 0
+      fi
+      if [[ $# -gt 0 ]]; then
+        case "$1" in
+          --profile|--profiles|--reinstall)
+            chroot_die "$1 is only valid with 'service $distro install desktop'"
+            ;;
+          *)
+            chroot_die "unknown service install argument for $builtin_id: $1"
+            ;;
         esac
       fi
       chroot_service_install_builtin "$distro" "$builtin_id"
@@ -85,6 +140,10 @@ PY
         esac
       fi
       chroot_require_service_name "$name"
+      if [[ "${name,,}" == "$CHROOT_SERVICE_DESKTOP_SERVICE_NAME" ]]; then
+        chroot_service_desktop_remove "$distro"
+        return 0
+      fi
       local def_file
       def_file="$(chroot_service_def_file "$distro" "$name")"
       chroot_info "Removing service '$name' from $distro"
@@ -97,7 +156,9 @@ PY
       local name="$1"
       [[ -n "$name" ]] || chroot_die "service start requires <name>"
       chroot_require_service_name "$name"
-      if chroot_service_is_pcbridge "$name"; then
+      if [[ "${name,,}" == "$CHROOT_SERVICE_DESKTOP_SERVICE_NAME" ]]; then
+        chroot_service_desktop_start "$distro"
+      elif chroot_service_is_pcbridge "$name"; then
         local running_pid
         running_pid="$(chroot_service_get_pid "$distro" "$name" 2>/dev/null || true)"
         if [[ -n "$running_pid" ]]; then
@@ -129,14 +190,20 @@ PY
       local name="$1"
       [[ -n "$name" ]] || chroot_die "service stop requires <name>"
       chroot_require_service_name "$name"
-      chroot_service_stop "$distro" "$name"
+      if [[ "${name,,}" == "$CHROOT_SERVICE_DESKTOP_SERVICE_NAME" ]]; then
+        chroot_service_desktop_stop "$distro"
+      else
+        chroot_service_stop "$distro" "$name"
+      fi
       chroot_service_print_ssh_connect_help "$distro" "$name" 0
       ;;
     restart)
       local name="$1"
       [[ -n "$name" ]] || chroot_die "service restart requires <name>"
       chroot_require_service_name "$name"
-      if chroot_service_is_pcbridge "$name"; then
+      if [[ "${name,,}" == "$CHROOT_SERVICE_DESKTOP_SERVICE_NAME" ]]; then
+        chroot_service_desktop_restart "$distro"
+      elif chroot_service_is_pcbridge "$name"; then
         local pcbridge_mode_line pcbridge_mode pcbridge_action pcbridge_prefix
         pcbridge_mode_line="$(chroot_service_pcbridge_select_start_mode "$distro")"
         IFS=$'\t' read -r pcbridge_mode pcbridge_action <<<"$pcbridge_mode_line"

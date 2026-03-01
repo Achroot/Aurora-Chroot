@@ -51,6 +51,15 @@ TUI_PY_EMBEDDED="$(cat "${TUI_PY_PARTS[@]}")"
     parts=("$parts_dir"/[0-9][0-9][0-9]_*.sh)
     if [[ -f "${parts[0]:-}" ]]; then
       for part in "${parts[@]}"; do
+        if [[ "$lib" == "service.sh" && "$(basename "$part")" == "090_desktop.sh" ]]; then
+          desktop_parts=("$BASE_DIR"/lib/service/desktop/[0-9][0-9][0-9]_*.sh)
+          if [[ -f "${desktop_parts[0]:-}" ]]; then
+            for desktop_part in "${desktop_parts[@]}"; do
+              sed '1{/^#!/d;}' "$desktop_part"
+              echo
+            done
+          fi
+        fi
         sed '1{/^#!/d;}' "$part"
         echo
       done

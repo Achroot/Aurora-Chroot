@@ -57,6 +57,12 @@ chroot_cmd_sessions() {
         esac
       fi
 
+      if [[ "$session_id" == "$(chroot_service_desktop_session_id)" ]] && chroot_service_desktop_session_is_tracked "$distro" "$session_id"; then
+        chroot_service_desktop_stop "$distro"
+        chroot_log_info sessions "kill-desktop-stop distro=$distro session=$session_id"
+        return 0
+      fi
+
       local kill_out kill_rc found targeted term_sent kill_sent still_alive
       kill_rc=0
       kill_out="$(chroot_session_kill_one "$distro" "$session_id" 3)" || kill_rc=$?
@@ -96,6 +102,11 @@ chroot_cmd_sessions() {
       done
       [[ "$grace" =~ ^[0-9]+$ ]] || chroot_die "--grace must be a non-negative integer"
 
+      if chroot_service_desktop_session_is_tracked "$distro"; then
+        chroot_info "Stopping desktop service before killing remaining sessions..."
+        chroot_service_desktop_stop "$distro"
+      fi
+
       local kill_out kill_rc targeted term_sent kill_sent remaining cleaned skipped_identity
       kill_rc=0
       kill_out="$(chroot_session_kill_all "$distro" "$grace")" || kill_rc=$?
@@ -122,4 +133,3 @@ chroot_cmd_sessions() {
       ;;
   esac
 }
-

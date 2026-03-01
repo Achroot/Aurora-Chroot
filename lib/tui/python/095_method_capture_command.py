@@ -15,6 +15,7 @@
         process_result = {}
         stream_lock = threading.Lock()
         stream_last_activity = [started]
+        used_live_output = bool(interactive)
 
         def append_limited(buf, ch):
             buf[0] += ch
@@ -273,6 +274,7 @@
             while t.is_alive():
                 elapsed = time.time() - started
                 if interactive:
+                    used_live_output = True
                     height, width = self.stdscr.getmaxyx()
                     self.stdscr.erase()
                     if height < 14 or width < 54:
@@ -386,6 +388,7 @@
                                 f"{loading_text} {spinner[idx]}", height, width
                             )
                 else:
+                    used_live_output = True
                     height, width = self.stdscr.getmaxyx()
                     self.stdscr.erase()
                     if height < 14 or width < 54:
@@ -514,4 +517,5 @@
             stderr = "\n".join(list(stderr_lines))
 
         duration = time.time() - started
+        self.last_capture_used_live_output = used_live_output
         return rc, stdout, stderr, duration, rendered

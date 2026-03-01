@@ -29,7 +29,7 @@
                 return
             stdin_data = "y\n"
         elif command == "clear-cache" and "--all" in args:
-            if not self.prompt_yes_no("Clear all cached tarballs?", default_no=True):
+            if not self.prompt_yes_no("Clear cached downloads and disposable runtime files?", default_no=True):
                 self.status("Clear-cache canceled", "info")
                 return
         elif command == "nuke":
@@ -57,4 +57,3 @@
             self.execute_command(cmd, stdin_data=stdin_data, back_state="form", interactive=True)
         else:
             self.execute_command_stream(cmd, stdin_data=stdin_data, back_state="form")
-

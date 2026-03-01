@@ -3,10 +3,12 @@
         if self.state == "menu":
             hint = "Arrows: navigate  Enter: open  r: run  q: quit"
         elif self.state == "form":
-            if self.active_command == "exec":
-                hint = "Arrows: move  Enter/e: edit  r: run  c: clear  b: back  q: quit"
+            if self.form_panel_focus == "right":
+                hint = "Tap/Tab: options  Arrows/PgUp/PgDn: scroll docs  Enter: options  r: run  b: back"
+            elif self.active_command == "exec":
+                hint = "Arrows: move  Enter/e: edit  Tap/Tab: preview  r: run  c: clear  b: back"
             else:
-                hint = "Arrows: move  Enter: edit/toggle  r: run  c: clear  b: back  q: quit"
+                hint = "Arrows: move  Enter: edit/toggle  Tap/Tab: preview  r: run  c: clear  b: back"
         elif self.state == "distros":
             if self.distros_stage == "distros":
                 hint = "Arrows: select distro  Enter: versions  r: fetch latest  b: menu  q: quit"
@@ -31,4 +33,3 @@
             message = f"[{self.status_message}]"
             x = max(1, width - len(message) - 2)
             addstr_clipped(self.stdscr, height - 1, x, message, width - x - 1, status_attr)
-
