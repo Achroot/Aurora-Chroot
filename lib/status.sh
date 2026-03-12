@@ -25,14 +25,14 @@ chroot_select_installed_distro() {
     return 2
   fi
 
-  printf '\nInstalled distros:\n'
+  printf '\nInstalled distros:\n' >&2
   local idx=1 release sessions mounts
   for distro in "${distros[@]}"; do
     release="$(chroot_get_distro_flag "$distro" release 2>/dev/null || true)"
     sessions="$(chroot_session_count "$distro" 2>/dev/null || echo 0)"
     mounts="$(chroot_mount_count_for_distro "$distro" 2>/dev/null || echo 0)"
     printf '  %2d) %-16s release=%-8s sessions=%-3s mounts=%-3s\n' \
-      "$idx" "$distro" "${release:-n/a}" "$sessions" "$mounts"
+      "$idx" "$distro" "${release:-n/a}" "$sessions" "$mounts" >&2
     idx=$((idx + 1))
   done
 

@@ -22,7 +22,8 @@
                 break
             cmd = self.commands[idx]
             marker = "->" if idx == self.menu_index else "  "
-            text = f"{marker} {cmd}"
+            display_cmd = "tor-beta" if cmd == "tor" else cmd
+            text = f"{marker} {display_cmd}"
             style = self.color(2, curses.A_BOLD) if idx == self.menu_index else self.color(0)
             addstr_clipped(self.stdscr, y, 2, text, left_width - 4, style)
 
@@ -46,4 +47,3 @@
         if selected == "settings" and y < content_top + content_height - 3:
             y += 1
             addstr_clipped(self.stdscr, y, right_left + 2, "Shows current value + allowed values per key.", right_width - 4, self.color(6))
-

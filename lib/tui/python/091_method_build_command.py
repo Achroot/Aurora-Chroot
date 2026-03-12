@@ -27,6 +27,95 @@
                     args.append("--live")
             return args, stdin_data
 
+        if command == "tor":
+            distro = self.require_text("distro", "Installed distro")
+            action = self.form_values.get("action", "status")
+            args.append(distro)
+            if action == "status":
+                args.append("status")
+                if self.form_values.get("json"):
+                    args.append("--json")
+            elif action in ("on", "restart"):
+                args.append(action)
+                run_mode = str(self.form_values.get("run_mode", "default")).strip().lower() or "default"
+                if run_mode == "configured":
+                    args.append("--configured")
+                elif run_mode == "configured-apps":
+                    args.extend(["--configured", "apps"])
+                elif run_mode == "configured-exit":
+                    args.extend(["--configured", "exit"])
+                if self.form_values.get("no_lan_bypass"):
+                    args.append("--no-lan-bypass")
+            elif action in ("off", "stop"):
+                args.append("off")
+            elif action == "freeze":
+                args.append("freeze")
+            elif action == "doctor":
+                args.append("doctor")
+                if self.form_values.get("json"):
+                    args.append("--json")
+            elif action == "newnym":
+                args.append("newnym")
+            elif action == "logs":
+                args.append("logs")
+                tail = self.read_text("tail")
+                if tail:
+                    parsed = self.read_positive_int("tail", "Tail lines", required=True)
+                    args.extend(["--tail", str(parsed)])
+            elif action == "apps":
+                args.append("apps")
+                apps_action = self.form_values.get("apps_action", "browse")
+                apps_scope = str(self.form_values.get("apps_scope", "all")).strip().lower() or "all"
+                scope_args = []
+                if apps_scope == "user":
+                    scope_args.append("--user-only")
+                elif apps_scope == "system":
+                    scope_args.append("--system-only")
+                if apps_action == "browse":
+                    query = self.read_text("apps_query")
+                    if query:
+                        args.extend(["search", query] + scope_args)
+                    else:
+                        args.extend(["list"] + scope_args)
+                elif apps_action == "bypass-show":
+                    args.extend(["bypass", "show"] + scope_args)
+                elif apps_action == "bypass-add":
+                    package_value = self.read_text("app_pick") or self.read_text("apps_query")
+                    package_value = self.require_text("app_pick" if self.read_text("app_pick") else "apps_query", "App query")
+                    args.extend(["bypass", "add", package_value] + scope_args)
+                elif apps_action == "bypass-remove":
+                    package_value = self.read_text("app_pick") or self.read_text("apps_query")
+                    package_value = self.require_text("app_pick" if self.read_text("app_pick") else "apps_query", "App query")
+                    args.extend(["bypass", "remove", package_value] + scope_args)
+            elif action == "exit":
+                args.append("exit")
+                exit_action = self.form_values.get("exit_action", "show")
+                if exit_action == "show":
+                    args.extend(["show"])
+                elif exit_action == "list":
+                    query = self.read_text("country_query")
+                    args.extend(["list"])
+                    if query:
+                        args.extend(["--query", query])
+                elif exit_action == "add":
+                    country_value = self.read_text("country_pick") or self.read_text("country_query")
+                    country_value = self.require_text("country_pick" if self.read_text("country_pick") else "country_query", "Country query")
+                    args.extend(["add", country_value])
+                elif exit_action == "remove":
+                    country_value = self.read_text("country_pick") or self.read_text("country_query")
+                    country_value = self.require_text("country_pick" if self.read_text("country_pick") else "country_query", "Country query")
+                    args.extend(["remove", country_value])
+                elif exit_action == "clear":
+                    args.extend(["clear"])
+                elif exit_action == "strict-on":
+                    args.extend(["strict", "on"])
+                elif exit_action == "strict-off":
+                    args.extend(["strict", "off"])
+            elif action == "remove":
+                args.append("remove")
+                args.append("--yes")
+            return args, stdin_data
+
         if command == "logs":
             tail = self.read_text("tail")
             if tail:

@@ -12,6 +12,7 @@
             "distros",
             "install-local",
             "status",
+            "tor",
             "service",
             "sessions",
             "login",
@@ -42,4 +43,3 @@
                 ordered.append(name)
 
         return ordered
-

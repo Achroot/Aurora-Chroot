@@ -66,6 +66,10 @@ chroot_cmd_remove() {
   chroot_info "Session handling: active sessions will be terminated before unmount."
   chroot_remove_confirm_yes_no "Remove distro '$distro' now?" || chroot_die "remove aborted"
 
+  if declare -F chroot_tor_locked_teardown_for_distro >/dev/null 2>&1; then
+    chroot_tor_locked_teardown_for_distro "$distro" >/dev/null 2>&1 || true
+  fi
+
   # Unmount first; this command handles its own lock and avoids nested lock deadlock.
   local unmount_rc=0
   chroot_cmd_unmount "$distro" --kill-sessions || unmount_rc=$?

@@ -66,6 +66,7 @@ Aurora can install and manage full Linux desktop sessions directly from the exis
 - Backup and restore support for full, rootfs-only, or state-only snapshots.
 - Built-in service installers for `desktop`, `sshd`, `pcbridge`, and distro-specific `zsh` setup.
 - Root-backend detection and preflight diagnostics through `doctor`.
+- Full Native Tor support through the `tor` command. Tor is currently in beta, with simple CLI/TUI controls for rooted Android and automatic package install across apt, pacman, dnf/yum, zypper, apk, and xbps-based distros.
 
 ## Install From A Release
 
@@ -132,12 +133,13 @@ aurora
 | Setup and diagnostics | `init`, `doctor`, `settings`, `logs` |
 | Distro lifecycle | `distros`, `install-local`, `remove`, `nuke` |
 | Runtime access | `login`, `exec`, `mount`, `unmount`, `confirm-unmount` |
-| State and operations | `status`, `sessions`, `service` |
+| State and operations | `status`, `tor` (beta), `sessions`, `service` |
 | Data management | `backup`, `restore`, `clear-cache` |
 
 For the full command reference, see [HELP.md](HELP.md).
 
 The `service` command also includes the built-in desktop GUI flow, alongside `sshd`, `pcbridge`, and `zsh`.
+
 
 ## What The Repo Contains
 

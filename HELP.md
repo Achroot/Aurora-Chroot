@@ -110,6 +110,53 @@ Displays an overview of installed distros, active sessions, and mount states.
 - `--json`: JSON report including cache size and `safe_to_remove`/`rootfs_mounts`.
 - `--live`: with `--json`, adds per-distro live diagnostics (`live.active_sessions`, `live.active_mounts`, stale counters, and raw log-entry counts).
 
+### `tor <distro> [status|on|off|restart|freeze|logs|newnym|doctor|apps|exit|remove] [args...]`
+
+Controls Aurora's distro-backed Tor mode for supported Android app traffic.
+
+- `status`: Prints current Tor mode status for the selected distro. Default action. When the Tor daemon is running and bootstrapped, Aurora shows both Tor control's current exit candidate and a separate live SOCKS-routed public-exit probe for comparison. If they do not match, Aurora notes that the probe hit a different Tor exit; if the IP matches but country codes differ, Aurora notes that Tor control and external GeoIP data disagree.
+- `status --json`: Prints machine-readable Tor status for TUI and scripting, including `active_exit`, `public_exit`, and the `active_exit.matched_public_ip` / `active_exit.selection` comparison fields when available.
+- `on [--configured [apps|exit]] [--no-lan-bypass]`: Mounts the selected distro, installs/runs Tor inside it, waits for bootstrap, then applies Aurora-owned routing rules. Plain `on` ignores saved app-bypass and exit-country preferences. `on --configured` applies both. `on --configured apps` applies only saved app-bypass config. `on --configured exit` applies only saved exit-country config. `--no-lan-bypass` blocks direct private/LAN IPv4 access for targeted apps instead of allowing the usual bypass.
+- `off`: Removes Aurora-owned routing rules and stops the selected distro's Tor daemon.
+- `restart [--configured [apps|exit]] [--no-lan-bypass]`: Runs a clean `off` then `on` cycle. `--configured` applies both saved app-bypass and exit-country preferences. `--configured apps` and `--configured exit` apply only that side. `--no-lan-bypass` blocks direct private/LAN IPv4 access for targeted apps instead of allowing the usual bypass.
+- `freeze`: Pins the current public Tor exit for the active session. The freeze is runtime-only and clears automatically on `newnym`, `off`, or `restart`.
+- `logs [--tail <N>]`: Shows the selected distro's Tor runtime log.
+- `newnym`: Requests fresh Tor circuits for new connections on the active selected distro.
+- `doctor [--json]`: Probes distro/backend readiness and routing-rule support without enabling Tor.
+- `apps list|search|bypass`: Manages the saved app bypass list for configured Tor runs.
+  `apps list [--json] [--user-only|--system-only]`
+  `apps search <query> [--json] [--user-only|--system-only]`
+  `apps bypass show [--json] [--user-only|--system-only]`
+  `apps bypass add <query>`
+  `apps bypass remove <query>`
+- `exit show|list|add|remove|clear|strict`: Manages saved exit-country preferences for configured Tor runs.
+- `remove [--yes]`: Stops Tor for the selected distro if needed, then deletes Aurora-managed Tor state plus Aurora and standard Tor runtime/config/log/cache directories inside that distro, while keeping the installed distro packages themselves installed.
+
+Behavior notes:
+- V1 is distro-backed and requires an installed distro.
+- Automatic Tor package installation currently supports apt, pacman, dnf, yum, zypper, apk, and xbps-based distros. Ubuntu remains the primary tested path.
+- Installs Tor inside the selected distro when it is missing.
+- Only one distro can be the active system-wide Tor backend at a time.
+- Routes supported TCP traffic through Tor and sends DNS to Tor `DNSPort`.
+- Blocks unsupported UDP traffic instead of letting it leak direct.
+- Blocks IPv6 in Tor mode to reduce leak risk.
+- Bypasses loopback and common private/LAN IPv4 destinations.
+- Targets Android app UIDs discovered from package-manager data. Root-owned/system daemon traffic is not included by default.
+- Tor refuses to start if the selected distro would run the daemon as root instead of a dedicated Tor user.
+- App bypass is enforced at the Android UID level. When multiple packages share one UID, adding or removing any of them affects that whole UID group.
+- User/system app scope filtering is best-effort from Android package metadata. Packages that cannot be classified still appear in the unfiltered view as `unknown`.
+- Host Termux/Aurora traffic is included when the distro Tor daemon runs under a different UID than the host user; otherwise status shows a warning and excludes it.
+- Tor status warns if the Android app inventory changed since Tor was enabled, because the targeted UID snapshot is generated at `tor on` / `tor restart` time.
+- Tor status also warns that Android DNS anonymity still depends on device resolver behavior and should be validated on-device when that matters.
+- Some apps may fail or be slower. This is Tor mode, not a full-protocol VPN replacement.
+- Circuit rotation behavior is controlled by setting `tor_rotation_min` (default `5`), which maps to Tor `MaxCircuitDirtiness` for new connections.
+- Bootstrap wait behavior is controlled by setting `tor_bootstrap_timeout_sec` (default `45`).
+- App bypass and exit-country preferences are saved per distro and only used in configured runs: `--configured`, `--configured apps`, or `--configured exit`.
+- Runtime exit freeze is session-only and does not rewrite saved exit-country preferences.
+- `apps list` and `apps search` refresh the Android app inventory automatically before showing results.
+- `sessions kill`, `sessions kill-all`, `unmount --kill-sessions`, and distro `remove` all stop Tor cleanly when it is active for that distro.
+- If `tor on` fails and Aurora mounted the distro only for that attempt, Aurora unmounts it again during failure cleanup.
+
 ### `service <distro> [action] [args...]`
 
 Manages persistent background services and daemons without a traditional init system.

@@ -643,6 +643,11 @@ chroot_cmd_unmount() {
   [[ -n "$rootfs_real" ]] || chroot_die "failed to resolve distro rootfs path for unmount: $rootfs_path"
 
   log_file="$(chroot_distro_mount_log "$distro")"
+  if (( kill_sessions == 1 )); then
+    if declare -F chroot_tor_locked_teardown_for_distro >/dev/null 2>&1; then
+      chroot_tor_locked_teardown_for_distro "$distro" >/dev/null 2>&1 || true
+    fi
+  fi
   chroot_lock_acquire "distro-$distro" || chroot_die "failed distro lock"
 
   if (( kill_sessions == 1 )); then
@@ -650,7 +655,6 @@ chroot_cmd_unmount() {
       chroot_info "Stopping desktop service before session cleanup..."
       chroot_service_desktop_stop "$distro"
     fi
-
     local kill_out kill_rc targeted term_sent kill_sent cleaned skipped_identity
     kill_rc=0
     kill_out="$(chroot_session_kill_all "$distro" 3)" || kill_rc=$?

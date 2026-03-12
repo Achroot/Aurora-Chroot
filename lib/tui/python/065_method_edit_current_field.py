@@ -11,3 +11,5 @@
         new_value = self.prompt_input(field["label"], current)
         self.form_values[fid] = new_value.strip()
         self.preview_scroll = 0
+        if self.active_command == "tor":
+            self.handle_tor_field_change(fid)

@@ -22,3 +22,5 @@
                 self.handle_service_field_change(fid)
             if self.active_command == "sessions" and fid in ("distro", "action"):
                 self.refresh_session_choices(show_error=False)
+            if self.active_command == "tor":
+                self.handle_tor_field_change(fid)

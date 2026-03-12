@@ -47,6 +47,10 @@
         self.service_payload_data = None
         self.service_builtin_payload_data = None
         self.desktop_profile_payload_data = None
+        self.tor_status_payload_data = None
+        self.tor_apps_payload_data = None
+        self.tor_exit_payload_data = None
+        self.tor_country_payload_data = None
 
         self.status_message = ""
         self.status_kind = "info"

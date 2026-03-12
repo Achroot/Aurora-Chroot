@@ -28,6 +28,14 @@
                 self.status("Remove canceled", "info")
                 return
             stdin_data = "y\n"
+        elif command == "tor" and len(args) >= 2 and args[1] == "remove":
+            distro = args[0] if args else self.form_values.get("distro", "")
+            if not self.prompt_yes_no(
+                f"Remove Tor state/config/log/cache for distro '{distro}' and keep packages installed?",
+                default_no=True,
+            ):
+                self.status("Tor remove canceled", "info")
+                return
         elif command == "clear-cache" and "--all" in args:
             if not self.prompt_yes_no("Clear cached downloads and disposable runtime files?", default_no=True):
                 self.status("Clear-cache canceled", "info")
@@ -57,3 +65,12 @@
             self.execute_command(cmd, stdin_data=stdin_data, back_state="form", interactive=True)
         else:
             self.execute_command_stream(cmd, stdin_data=stdin_data, back_state="form")
+            if command == "tor":
+                self.refresh_tor_status_payload(show_error=False)
+                action = str(self.form_values.get("action", "")).strip().lower()
+                if action == "apps":
+                    self.refresh_tor_apps_payload(show_error=False)
+                elif action == "exit":
+                    self.refresh_tor_exit_payload(show_error=False)
+                    self.refresh_tor_country_payload(show_error=False)
+                self.refresh_tor_dynamic_choices()

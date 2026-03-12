@@ -20,6 +20,7 @@ LIBS=(
   session.sh
   service.sh
   status.sh
+  tor.sh
   backup.sh
   remove.sh
   nuke.sh

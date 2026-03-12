@@ -32,6 +32,8 @@ if [[ -z "${CHROOT_LIBS_LOADED:-}" ]]; then
   source "$CHROOT_BASE_DIR/lib/service.sh"
   # shellcheck source=lib/status.sh
   source "$CHROOT_BASE_DIR/lib/status.sh"
+  # shellcheck source=lib/tor.sh
+  source "$CHROOT_BASE_DIR/lib/tor.sh"
   # shellcheck source=lib/backup.sh
   source "$CHROOT_BASE_DIR/lib/backup.sh"
   # shellcheck source=lib/remove.sh
@@ -57,6 +59,7 @@ Commands:
   distros [--json] [--refresh] [--install <id> --version <release>]
   install-local <distro> --file <path> [--sha256 <hex>]
   status [--all|--distro <id>] [--json] [--live]
+  tor <distro> [status|on|off|restart|logs|newnym|doctor|apps|exit|remove] [args...]
   service <distro> [list|status|start|stop|restart|add|remove|install] [args...]
   sessions <distro> [list|status|kill|kill-all] [args...]
   login <distro>
@@ -111,6 +114,9 @@ chroot_main() {
       ;;
     status)
       chroot_cmd_status "$@"
+      ;;
+    tor)
+      chroot_cmd_tor "$@"
       ;;
     distros)
       chroot_cmd_distros "$@"

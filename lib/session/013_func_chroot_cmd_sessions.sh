@@ -62,6 +62,13 @@ chroot_cmd_sessions() {
         chroot_log_info sessions "kill-desktop-stop distro=$distro session=$session_id"
         return 0
       fi
+      if declare -F chroot_tor_session_id >/dev/null 2>&1; then
+        if [[ "$session_id" == "$(chroot_tor_session_id)" ]]; then
+          chroot_tor_locked_teardown_for_distro "$distro"
+          chroot_log_info sessions "kill-tor-stop distro=$distro session=$session_id"
+          return 0
+        fi
+      fi
 
       local kill_out kill_rc found targeted term_sent kill_sent still_alive
       kill_rc=0
@@ -105,6 +112,9 @@ chroot_cmd_sessions() {
       if chroot_service_desktop_session_is_tracked "$distro"; then
         chroot_info "Stopping desktop service before killing remaining sessions..."
         chroot_service_desktop_stop "$distro"
+      fi
+      if declare -F chroot_tor_locked_teardown_for_distro >/dev/null 2>&1; then
+        chroot_tor_locked_teardown_for_distro "$distro" >/dev/null 2>&1 || true
       fi
 
       local kill_out kill_rc targeted term_sent kill_sent remaining cleaned skipped_identity

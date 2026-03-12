@@ -74,6 +74,24 @@ chroot_settings_schema_json() {
       "default": 14,
       "status": "active",
       "description": "Delete action logs older than this many days."
+    },
+    {
+      "key": "tor_rotation_min",
+      "type": "int",
+      "min": 1,
+      "max": 120,
+      "default": 5,
+      "status": "active",
+      "description": "Approximate Tor circuit rotation window in minutes for new connections (maps to MaxCircuitDirtiness; does not forcibly switch active connections)."
+    },
+    {
+      "key": "tor_bootstrap_timeout_sec",
+      "type": "int",
+      "min": 10,
+      "max": 600,
+      "default": 45,
+      "status": "active",
+      "description": "How long Tor enable waits for bootstrap completion before failing and cleaning up."
     }
   ]
 }

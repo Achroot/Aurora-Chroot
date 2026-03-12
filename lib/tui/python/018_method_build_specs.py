@@ -45,6 +45,161 @@
                     },
                 ]
             },
+            "tor": {
+                "fields": [
+                    {
+                        "id": "distro",
+                        "label": "Installed distro",
+                        "type": "choice",
+                        "choices": [("", "<loading installed distros>")],
+                        "default": "",
+                    },
+                    {
+                        "id": "action",
+                        "label": "Action",
+                        "type": "choice",
+                        "choices": [
+                            ("status", "Show Tor status"),
+                            ("on", "Enable Tor mode"),
+                            ("off", "Disable Tor mode"),
+                            ("restart", "Restart Tor mode"),
+                            ("freeze", "Freeze current exit"),
+                            ("logs", "Show Tor logs"),
+                            ("newnym", "Request new identity"),
+                            ("doctor", "Run Tor doctor"),
+                            ("apps", "Manage app bypass list"),
+                            ("exit", "Manage exit countries"),
+                            ("remove", "Remove Tor data (keep packages)"),
+                        ],
+                        "default": "status",
+                    },
+                    {
+                        "id": "run_mode",
+                        "label": "Run mode",
+                        "type": "choice",
+                        "choices": [
+                            ("default", "Default run (ignore saved app/exit config)"),
+                            ("configured", "Configured run (use saved app + exit config)"),
+                            ("configured-apps", "Configured run (apps only; ignore saved exit config)"),
+                            ("configured-exit", "Configured run (exit only; ignore saved app config)"),
+                        ],
+                        "default": "default",
+                        "show_if": {"id": "action", "equals": ["on", "restart"]},
+                    },
+                    {
+                        "id": "no_lan_bypass",
+                        "label": "Block local/LAN direct access",
+                        "type": "bool",
+                        "default": False,
+                        "show_if": {"id": "action", "equals": ["on", "restart"]},
+                    },
+                    {
+                        "id": "json",
+                        "label": "JSON output",
+                        "type": "bool",
+                        "default": False,
+                        "show_if": {"id": "action", "equals": ["status", "doctor"]},
+                    },
+                    {
+                        "id": "tail",
+                        "label": "Tail lines (logs action)",
+                        "type": "text",
+                        "default": "120",
+                        "show_if": {"id": "action", "equals": "logs"},
+                    },
+                    {
+                        "id": "apps_action",
+                        "label": "Apps action",
+                        "type": "choice",
+                        "choices": [
+                            ("browse", "Browse/search apps"),
+                            ("bypass-add", "Add app to bypass"),
+                            ("bypass-remove", "Remove app from bypass"),
+                            ("bypass-show", "Show bypassed apps"),
+                        ],
+                        "default": "browse",
+                        "show_if": {"id": "action", "equals": "apps"},
+                    },
+                    {
+                        "id": "apps_scope",
+                        "label": "App scope",
+                        "type": "choice",
+                        "choices": [
+                            ("all", "All apps"),
+                            ("user", "User apps only"),
+                            ("system", "System apps only"),
+                        ],
+                        "default": "all",
+                        "show_if": {"id": "action", "equals": "apps"},
+                    },
+                    {
+                        "id": "apps_query",
+                        "label": "App query",
+                        "type": "text",
+                        "default": "",
+                        "show_if": {
+                            "all": [
+                                {"id": "action", "equals": "apps"},
+                                {"id": "apps_action", "equals": ["browse", "bypass-add", "bypass-remove"]},
+                            ]
+                        },
+                    },
+                    {
+                        "id": "app_pick",
+                        "label": "Matching app",
+                        "type": "choice",
+                        "choices": [("", "<loading apps>")],
+                        "default": "",
+                        "show_if": {
+                            "all": [
+                                {"id": "action", "equals": "apps"},
+                                {"id": "apps_action", "equals": ["bypass-add", "bypass-remove"]},
+                            ]
+                        },
+                    },
+                    {
+                        "id": "exit_action",
+                        "label": "Exit action",
+                        "type": "choice",
+                        "choices": [
+                            ("show", "Show exit config"),
+                            ("list", "Browse/search countries"),
+                            ("add", "Add preferred exit country"),
+                            ("remove", "Remove preferred exit country"),
+                            ("clear", "Clear saved exit config"),
+                            ("strict-on", "Set strict mode on"),
+                            ("strict-off", "Set strict mode off"),
+                        ],
+                        "default": "show",
+                        "show_if": {"id": "action", "equals": "exit"},
+                    },
+                    {
+                        "id": "country_query",
+                        "label": "Country query",
+                        "type": "text",
+                        "default": "",
+                        "show_if": {
+                            "all": [
+                                {"id": "action", "equals": "exit"},
+                                {"id": "exit_action", "equals": ["list", "add", "remove"]},
+                            ]
+                        },
+                    },
+                    {
+                        "id": "country_pick",
+                        "label": "Matching country",
+                        "type": "choice",
+                        "choices": [("", "<loading countries>")],
+                        "default": "",
+                        "show_if": {
+                            "all": [
+                                {"id": "action", "equals": "exit"},
+                                {"id": "exit_action", "equals": ["add", "remove"]},
+                            ]
+                        },
+                    },
+                ],
+            },
             "logs": {
                 "fields": [
                     {
